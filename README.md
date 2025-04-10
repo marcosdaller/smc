@@ -50,7 +50,7 @@ El proyecto se compone de múltiples contenedores que se comunican mediante una 
   - *telegraf*: Agente que recolecta métricas y las envía a InfluxDB.
 - **Servicios Personalizados**  
   - *mqtt-subscriber*: Servicio que se suscribe a MQTT y realiza tareas específicas.
-  - *arduo*: Servicio personalizado que recibe mensajes MQTT y, mediante el script `senderistas.py`, procesa y reenvía variables a ThingsBoard.
+  - *arduo*: Servicio personalizado que recibe mensajes MQTT y, mediante el script `sender.py`, procesa y reenvía variables a ThingsBoard.
 
 ## Estructura de Directorios
 
@@ -58,13 +58,16 @@ El proyecto se compone de múltiples contenedores que se comunican mediante una 
 ├── configuration/
 │   ├── chirpstack/                          # Configuraciones de Chirpstack
 │   ├── chirpstack-gateway-bridge/           # Configuraciones del Gateway Bridge
-│   └── mosquitto/config/                    # Configuraciones del broker Mosquitto
+│   ├── mosquitto/config/                    # Configuraciones del broker Mosquitto
+│   └── postgresql/                          # Configuraciones del postgresql
 ├── arduo-serv/
-│   ├── senderistas.py                       # Script que envía datos a ThingsBoard
+│   ├── sender.py                            # Script que envía datos a ThingsBoard
 │   ├── requirements.txt                     # Dependencias de Python
 │   └── Dockerfile                           # Dockerfile para construir la imagen de Arduo
-├── sub-serv/                                # Código fuente del servicio mqtt-subscriber
-│   └── (Archivos del servicio MQTT subscriber)
+├── sub-serv/                                
+│   ├── subscriber.py                        # Script que envía datos
+│   ├── requirements.txt                     # Dependencias de Python
+│   └── Dockerfile                           # Dockerfile para construir la imagen de Arduo
 ├── grafana/
 │   ├── dashboards/                          # Dashboards personalizados
 │   └── provisioning/                        # Configuraciones de datasources y paneles
@@ -84,42 +87,15 @@ El proyecto se compone de múltiples contenedores que se comunican mediante una 
 
 ## Variables de Entorno
 
-```dotenv
-# Grafana
-GRAFANA_ADMIN_USER=admin
-GRAFANA_ADMIN_PASSWORD=admin
-GRAFANA_HOST_PORT=3000
-GRAFANA_CONTAINER_PORT=3000
+El proyecto hace uso de variables de entorno definidas en un archivo `.env`.  
+⚠️ **Por motivos de seguridad y privacidad, el contenido específico de estas variables no se incluye en este repositorio.**
 
-# InfluxDB
-INFLUXDB_USERNAME=usuario
-INFLUXDB_PASSWORD=contraseña
-INFLUXDB_ORG=miOrganizacion
-INFLUXDB_BUCKET=miBucket
-INFLUXDB_RETENTION=30d
-INFLUXDB_TOKEN=miToken
-INFLUXDB_HOST_PORT=8086
-INFLUXDB_CONTAINER_PORT=8086
-
-# MySQL (mqtt_db)
-MYSQL_ROOT_PASSWORD=raizpassword
-MYSQL_DATABASE=dbname
-MYSQL_USER=dbuser
-MYSQL_PASSWORD=dbpassword
-MYSQL_HOST_PORT=3306
-MYSQL_CONTAINER_PORT=3306
-
-# Arduo y MQTT Subscriber
-MQTT_HOST=mosquitto
-MQTT_PORT=1883
-MQTT_TOPIC=tu/topico
-TB_ACCESS_TOKEN=tu_token_thingsboard  # Si se utiliza en arduo-serv
-```
+> Se recomienda proporcionar un archivo `.env.example` para que otros desarrolladores puedan saber qué variables deben definir sin revelar valores sensibles.
 
 ## Despliegue con Docker Compose
 
 ```bash
-docker-compose up -d
+docker-compose up --build -d
 ```
 
 Este comando:
