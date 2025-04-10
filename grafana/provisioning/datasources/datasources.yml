@@ -1,0 +1,29 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB
+    type: influxdb  # Use InfluxDB as the data source
+    access: proxy
+    url: ${INFLUXDB_URL_BASE}:${INFLUXDB_CONTAINER_PORT}  # InfluxDB host and port
+    isDefault: true
+    basicAuth: false
+    jsonData:
+      httpMode: POST
+      organization: ${INFLUXDB_ORG}  # InfluxDB organization
+      defaultBucket: ${INFLUXDB_BUCKET}  # InfluxDB bucket
+      version: Flux
+    secureJsonData:
+      token: ${INFLUXDB_TOKEN}  # InfluxDB token
+
+  - name: MySQL
+    type: mysql  # Use MySQL as the data source
+    access: proxy
+    url: ${MYSQL_HOST}:${MYSQL_CONTAINER_PORT}  # MySQL host and port
+    isDefault: false
+    database: ${MYSQL_DATABASE}  # MySQL database name
+    user: ${MYSQL_USER}  # MySQL user
+    secureJsonData:
+      password: ${MYSQL_PASSWORD}  # MySQL password
+    jsonData:
+      tlsAuth: false
+      tlsAuthWithCACert: false

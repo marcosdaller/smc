@@ -1,0 +1,212 @@
+services:
+  chirpstack:
+    image: chirpstack/chirpstack:4
+    command: -c /etc/chirpstack
+    restart: unless-stopped
+    volumes:
+      - ./configuration/chirpstack:/etc/chirpstack
+    depends_on:
+      - postgres
+      - mosquitto
+      - redis
+    environment:
+      - MQTT_BROKER_HOST=mosquitto
+      - REDIS_HOST=redis
+      - POSTGRESQL_HOST=postgres
+    ports:
+      - "8080:8080"
+
+  chirpstack-gateway-bridge:
+    image: chirpstack/chirpstack-gateway-bridge:4
+    restart: unless-stopped
+    ports:
+      - "1700:1700/udp"
+    volumes:
+      - ./configuration/chirpstack-gateway-bridge:/etc/chirpstack-gateway-bridge
+    environment:
+      - INTEGRATION__MQTT__EVENT_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/event/{{ .EventType }}
+      - INTEGRATION__MQTT__STATE_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/state/{{ .StateType }}
+      - INTEGRATION__MQTT__COMMAND_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/command/#
+    depends_on:
+      - mosquitto
+  
+  chirpstack-gateway-bridge-basicstation:
+    image: chirpstack/chirpstack-gateway-bridge:4
+    restart: unless-stopped
+    command: -c /etc/chirpstack-gateway-bridge/chirpstack-gateway-bridge-basicstation-eu868.toml
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./configuration/chirpstack-gateway-bridge:/etc/chirpstack-gateway-bridge
+    depends_on:
+      - mosquitto
+
+  chirpstack-rest-api:
+    image: chirpstack/chirpstack-rest-api:4
+    restart: unless-stopped
+    command: --server chirpstack:8080 --bind 0.0.0.0:8090 --insecure
+    ports:
+      - "8090:8090"
+    depends_on:
+      - chirpstack
+
+  postgres:
+    image: postgres:14-alpine
+    restart: unless-stopped
+    volumes:
+      - ./configuration/postgresql/initdb:/docker-entrypoint-initdb.d
+      - postgresqldata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=chirpstack
+      - POSTGRES_PASSWORD=chirpstack
+      - POSTGRES_DB=chirpstack
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 300 1 --save 60 100 --appendonly no
+    volumes:
+      - redisdata:/data
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"  # WebSocket
+    volumes: 
+      - ./configuration/mosquitto/config/:/mosquitto/config/
+
+  grafana:
+    image: grafana/grafana:11.2.0  # Grafana v11.2.0
+    container_name: grafana  # Container name for Grafana
+    depends_on:
+      influxdb:
+        condition: service_healthy  # Ensure InfluxDB is healthy before starting Grafana
+    restart: unless-stopped  # Restart the service unless manually stopped
+    env_file:
+      - .env  # Load environment variables from the .env file
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}  # Grafana admin username
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}  # Grafana admin password
+      - GF_SECURITY_ALLOW_EMBEDDING=true  # Allow embedding iframes
+      - GF_SECURITY_X_FRAME_OPTIONS=     # Remove X-Frame-Options header
+    ports:
+      - "${GRAFANA_HOST_PORT}:${GRAFANA_CONTAINER_PORT}"  # Map host and container ports
+    volumes:
+      - grafana_data:/var/lib/grafana  # Volume for Grafana data persistence
+      - ./grafana/provisioning:/etc/grafana/provisioning  # Mount provisioning files (datasources & dashboards)
+      - ./grafana/dashboards:/var/lib/grafana/dashboards  # Mount dashboards JSON files
+
+  influxdb:
+    image: influxdb:2.7  # InfluxDB v2
+    container_name: influxdb  # The name of the container for InfluxDB
+    restart: unless-stopped  # Restart the service unless manually stopped
+    env_file:
+      - .env  # Load environment variables from the .env file
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
+      - DOCKER_INFLUXDB_INIT_RETENTION=${INFLUXDB_RETENTION}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+    ports:
+      - "${INFLUXDB_HOST_PORT}:${INFLUXDB_CONTAINER_PORT}"  # Expose InfluxDB port for external access
+    volumes:
+      - influxdb_data:/var/lib/influxdb2  # Volume to persist InfluxDB data
+    healthcheck:
+      test: ["CMD", "influx", "ping"]  # Ensure that InfluxDB is ready before proceeding
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  telegraf:
+    image: telegraf:1.30
+    container_name: telegraf
+    depends_on:
+      - influxdb
+      - mosquitto
+    volumes:
+      # Montas tu archivo de configuración
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    env_file:
+      - .env
+    restart: unless-stopped
+
+
+  mqtt_db:
+     image: mysql:8.4.1  # MySQL version 8.4.1
+     container_name: mqtt_db  # The name of the container for MySQL
+     restart: always  # Restart the container if it crashes
+     env_file:
+       - .env  # Load environment variables from the .env file
+     environment:
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - MYSQL_DATABASE=${MYSQL_DATABASE}
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+
+     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci --default-storage-engine=InnoDB  # character-set, collation and engine to allow symbols and accents
+     ports:
+       - "${MYSQL_HOST_PORT}:${MYSQL_CONTAINER_PORT}"  # Expose MySQL port for external access
+     volumes:
+       # When this volume is uncommented, MySQL data will persist across container restarts.
+       # However, database initialization (e.g., running SQL scripts) will only occur the first time
+       # the volume is created. If you need to reinitialize the database, you must manually remove the volume.
+       # Comennt/uncomment depending on needings
+       - db_data:/var/lib/mysql  # Volume to persist MySQL data
+       - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql  # Initialize database with SQL script
+     healthcheck:
+       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]  # Command to check if MySQL is ready by pinging the local server
+       interval: 10s  # Interval between healthcheck attempts
+       timeout: 5s  # Maximum time to wait for the command to complete before considering it failed
+       retries: 5  # Number of consecutive failures before marking the service as unhealthy
+       start_period: 10s
+
+  phpmyadmin:
+     image: arm64v8/phpmyadmin
+     container_name: phpmyadmin
+     restart: always
+     ports:
+     - "8081:80" 
+     environment:
+     - PMA_HOST=mqtt_db  # Nombre del servicio MySQL
+     - PMA_USER=${MYSQL_USER}  # Usuario definido en .env
+     - PMA_PASSWORD=${MYSQL_PASSWORD}  # Contraseña definida en .env
+     depends_on:
+     - mqtt_db  # Asegura que MySQL arranque antes de phpMyAdmin
+
+  mqtt-subscriber:
+    container_name: mqtt-subscriber
+    image: mqtt-subscriber-image
+    build:
+      context: ./sub-serv
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+    - mosquitto
+    - mqtt_db
+    - influxdb
+  
+  arduo:
+    container_name: arduo
+    image: arduo-image
+    build:
+      context: ./arduo-serv
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+    - mosquitto
+    - mqtt_db
+    - influxdb
+    
+volumes:
+  postgresqldata:
+  redisdata:
+  grafana_data:
+  influxdb_data:
+  db_data:
