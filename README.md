@@ -1,133 +1,133 @@
-# Proyecto Integrado de IoT, LoRaWAN y Telemetría
+# Integrated IoT, LoRaWAN, and Telemetry Project
 
-Este proyecto integra múltiples servicios en un entorno Docker para gestionar dispositivos IoT, comunicaciones MQTT y la visualización y almacenamiento de datos. La solución combina:
+This project integrates multiple services in a Docker environment to manage IoT devices, MQTT communication, and data visualization and storage. The solution combines:
 
-- **Chirpstack**: Servidor de red LoRaWAN que permite la gestión de dispositivos y gateways.
-- **Mosquitto**: Broker MQTT para la comunicación entre dispositivos y otros servicios.
-- **Arduo Service (arduo-serv)**: Servicio personalizado que se suscribe a un tópico MQTT, procesa mensajes JSON y envía variables individualmente a ThingsBoard.
-- **MQTT Subscriber**: Servicio adicional para suscribirse a tópicos MQTT y realizar acciones según la configuración.
-- **Almacenamiento y Gestión de Datos**:
-  - **Postgres**: Base de datos para Chirpstack.
-  - **Redis**: Caché para los servicios de Chirpstack.
-  - **InfluxDB**: Base de datos de series temporales utilizada por Telegraf para almacenar telemetría.
-  - **MySQL (mqtt_db)**: Base de datos para otros datos relacionados con MQTT (con phpMyAdmin para administración).
-- **Visualización**:
-  - **Grafana**: Plataforma de visualización de datos para crear dashboards interactivos.
-- **Telemetría**:
-  - **Telegraf**: Agente para la recolección de métricas que envía datos a InfluxDB.
+- **Chirpstack**: LoRaWAN network server for managing devices and gateways.
+- **Mosquitto**: MQTT broker for communication between devices and other services.
+- **Arduo Service (arduo-serv)**: Custom service that subscribes to an MQTT topic, processes JSON messages, and sends individual variables to ThingsBoard.
+- **MQTT Subscriber**: Additional service to subscribe to MQTT topics and perform actions based on configuration.
+- **Data Storage and Management**:
+  - **Postgres**: Database for Chirpstack.
+  - **Redis**: Cache for Chirpstack services.
+  - **InfluxDB**: Time-series database used by Telegraf to store telemetry data.
+  - **MySQL (mqtt_db)**: MQTT-related data database (with phpMyAdmin for administration).
+- **Visualization**:
+  - **Grafana**: Data visualization platform for building interactive dashboards.
+- **Telemetry**:
+  - **Telegraf**: Metrics collection agent that sends data to InfluxDB.
 
-Esta solución ofrece una arquitectura completa para gestionar una red IoT basada en LoRaWAN, procesar y enviar datos a plataformas de visualización y análisis.
+This solution provides a complete architecture to manage a LoRaWAN-based IoT network, process data, and forward it to visualization and analytics platforms.
 
-## Tabla de Contenidos
+## Table of Contents
 
-- [Arquitectura del Proyecto](#arquitectura-del-proyecto)
-- [Estructura de Directorios](#estructura-de-directorios)
-- [Requisitos Previos](#requisitos-previos)
-- [Variables de Entorno](#variables-de-entorno)
-- [Despliegue con Docker Compose](#despliegue-con-docker-compose)
-- [Acceso a los Servicios](#acceso-a-los-servicios)
-- [Problemas Comunes](#problemas-comunes)
-- [Contribuciones](#contribuciones)
-- [Licencia](#licencia)
+- [Project Architecture](#project-architecture)
+- [Directory Structure](#directory-structure)
+- [Prerequisites](#prerequisites)
+- [Environment Variables](#environment-variables)
+- [Deploying with Docker Compose](#deploying-with-docker-compose)
+- [Accessing Services](#accessing-services)
+- [Common Issues](#common-issues)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Arquitectura del Proyecto
+## Project Architecture
 
-El proyecto se compone de múltiples contenedores que se comunican mediante una red interna de Docker. A continuación, se listan los servicios clave:
+The project consists of multiple containers communicating through a Docker internal network. Key services include:
 
-- **Chirpstack y sus puentes**  
-  - *chirpstack*: Servidor de red LoRaWAN.
-  - *chirpstack-gateway-bridge* y *chirpstack-gateway-bridge-basicstation*: Puentes para la comunicación entre los gateways y el servidor.
-  - *chirpstack-rest-api*: API REST para interactuar con Chirpstack.
-- **Bases de Datos**  
-  - *postgres*: Utilizado por Chirpstack.
-  - *redis*: Caché para el servidor Chirpstack.
-  - *influxdb*: Repositorio de datos de telemetría.
-  - *mqtt_db (MySQL)*: Base de datos para la gestión de datos MQTT.
-- **Visualización y Administración**  
-  - *grafana*: Plataforma de dashboards y visualización.
-  - *phpmyadmin*: Interfaz web para administrar la base de datos MySQL.
-- **Telemetría y Monitoreo**  
-  - *telegraf*: Agente que recolecta métricas y las envía a InfluxDB.
-- **Servicios Personalizados**  
-  - *mqtt-subscriber*: Servicio que se suscribe a MQTT y realiza tareas específicas.
-  - *arduo*: Servicio personalizado que recibe mensajes MQTT y, mediante el script `sender.py`, procesa y reenvía variables a ThingsBoard.
+- **Chirpstack and Bridges**  
+  - *chirpstack*: LoRaWAN network server.
+  - *chirpstack-gateway-bridge* and *chirpstack-gateway-bridge-basicstation*: Bridges for communication between gateways and the server.
+  - *chirpstack-rest-api*: REST API to interact with Chirpstack.
+- **Databases**  
+  - *postgres*: Used by Chirpstack.
+  - *redis*: Cache for Chirpstack server.
+  - *influxdb*: Telemetry data storage.
+  - *mqtt_db (MySQL)*: MQTT data management database.
+- **Visualization and Management**  
+  - *grafana*: Dashboard and visualization platform.
+  - *phpmyadmin*: Web interface for managing the MySQL database.
+- **Telemetry and Monitoring**  
+  - *telegraf*: Agent collecting metrics and sending them to InfluxDB.
+- **Custom Services**  
+  - *mqtt-subscriber*: Service subscribing to MQTT and executing specific tasks.
+  - *arduo*: Custom service that receives MQTT messages and processes them with `sender.py`, forwarding variables to ThingsBoard.
 
-## Estructura de Directorios
+## Directory Structure
 
 ```plaintext
 ├── configuration/
-│   ├── chirpstack/                          # Configuraciones de Chirpstack
-│   ├── chirpstack-gateway-bridge/           # Configuraciones del Gateway Bridge
-│   ├── mosquitto/config/                    # Configuraciones del broker Mosquitto
-│   └── postgresql/                          # Configuraciones del postgresql
+│   ├── chirpstack/                          # Chirpstack configuration
+│   ├── chirpstack-gateway-bridge/           # Gateway Bridge configuration
+│   ├── mosquitto/config/                    # Mosquitto broker configuration
+│   └── postgresql/                          # PostgreSQL configuration
 ├── arduo-serv/
-│   ├── sender.py                            # Script que envía datos a ThingsBoard
-│   ├── requirements.txt                     # Dependencias de Python
-│   └── Dockerfile                           # Dockerfile para construir la imagen de Arduo
-├── sub-serv/                                
-│   ├── subscriber.py                        # Script que envía datos
-│   ├── requirements.txt                     # Dependencias de Python
-│   └── Dockerfile                           # Dockerfile para construir la imagen de Arduo
+│   ├── sender.py                            # Script to send data to ThingsBoard
+│   ├── requirements.txt                     # Python dependencies
+│   └── Dockerfile                           # Dockerfile to build Arduo image
+├── sub-serv/
+│   ├── subscriber.py                        # Script to send data
+│   ├── requirements.txt                     # Python dependencies
+│   └── Dockerfile                           # Dockerfile to build Arduo image
 ├── grafana/
-│   ├── dashboards/                          # Dashboards personalizados
-│   └── provisioning/                        # Configuraciones de datasources y paneles
+│   ├── dashboards/                          # Custom dashboards
+│   └── provisioning/                        # Datasource and panel configs
 ├── telegraf/
-│   └── telegraf.conf                        # Archivo de configuración para Telegraf
+│   └── telegraf.conf                        # Telegraf configuration file
 ├── mysql/
-│   └── init.sql                             # Script de inicialización para MySQL
-├── .env                                     # Archivo de variables de entorno
-└── docker-compose.yaml                      # Definición de contenedores y servicios
+│   └── init.sql                             # MySQL initialization script
+├── .env                                     # Environment variables file
+└── docker-compose.yaml                      # Container and service definitions
 ```
 
-## Requisitos Previos
+## Prerequisites
 
-- **Docker**: [Instalación de Docker](https://docs.docker.com/get-docker/)
-- **Docker Compose**: [Instalación de Docker Compose](https://docs.docker.com/compose/install/)
-- Archivos de configuración y scripts disponibles en las carpetas indicadas.
+- **Docker**: [Install Docker](https://docs.docker.com/get-docker/)
+- **Docker Compose**: [Install Docker Compose](https://docs.docker.com/compose/install/)
+- Configuration files and scripts are available in the listed directories.
 
-## Variables de Entorno
+## Environment Variables
 
-El proyecto hace uso de variables de entorno definidas en un archivo `.env`.  
-⚠️ **Por motivos de seguridad y privacidad, el contenido específico de estas variables no se incluye en este repositorio.**
+This project uses environment variables defined in a `.env` file.  
+⚠️ **For security and privacy reasons, specific values are not included in this repository.**
 
-> Se recomienda proporcionar un archivo `.env.example` para que otros desarrolladores puedan saber qué variables deben definir sin revelar valores sensibles.
+> It's recommended to provide a `.env.example` file to help other developers know which variables are needed without exposing sensitive data.
 
-## Despliegue con Docker Compose
+## Deploying with Docker Compose
 
 ```bash
 docker-compose up --build -d
 ```
 
-Este comando:
+This command:
 
-- Construirá las imágenes personalizadas para `arduo` y `mqtt-subscriber`.
-- Descargará las imágenes oficiales de Chirpstack, Mosquitto, Grafana, InfluxDB, etc.
-- Levantará todos los contenedores definidos en `docker-compose.yaml`.
+- Builds the custom images for `arduo` and `mqtt-subscriber`.
+- Pulls official images for Chirpstack, Mosquitto, Grafana, InfluxDB, etc.
+- Starts all containers defined in `docker-compose.yaml`.
 
-## Acceso a los Servicios
+## Accessing Services
 
 - **Chirpstack** → [http://localhost:8080](http://localhost:8080)  
 - **Chirpstack REST API** → [http://localhost:8090](http://localhost:8090)  
 - **Grafana** → [http://localhost:3000](http://localhost:3000)  
 - **InfluxDB** → [http://localhost:8086](http://localhost:8086)  
 - **phpMyAdmin** → [http://localhost:8081](http://localhost:8081)  
-- **Broker MQTT (Mosquitto)**: Puerto 1883 / WebSocket en 9001  
-- **Servicio Arduo**: Verifica los logs con `docker logs -f arduo` para asegurar funcionamiento  
-- **MQTT Subscriber**: Suscripción a tópicos y procesamiento según configuración  
+- **MQTT Broker (Mosquitto)**: Port 1883 / WebSocket on 9001  
+- **Arduo Service**: Check logs with `docker logs -f arduo` to ensure it's working  
+- **MQTT Subscriber**: Subscribes to topics and processes data according to configuration  
 
-## Problemas Comunes
+## Common Issues
 
-- Verifica los nombres de host/puertos en `.env`.
-- Elimina volúmenes si necesitas reiniciar datos persistentes (`docker volume rm nombre_volumen`).
-- Asegúrate de usar `callback_api_version` en clientes MQTT con `paho-mqtt 2.0.0`.
+- Double-check hostnames/ports in `.env`.
+- Remove volumes to reset persistent data (`docker volume rm volume_name`).
+- Make sure to use `callback_api_version` when using `paho-mqtt` 2.0.0 clients.
 
-## Contribuciones
+## Contributing
 
-Las contribuciones son bienvenidas. Puedes abrir issues o pull requests para mejorar este proyecto.
+Contributions are welcome. Feel free to open issues or pull requests to improve this project.
 
-## Licencia
+## License
 
-Este software se entrega **solo para fines de visualización y referencia**.
+This software is provided **for viewing and reference purposes only**.
 
 ```text
 Restricted Viewing License
@@ -155,5 +155,5 @@ EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR 
 IN CONNECTION WITH THE SOFTWARE OR THE VIEWING OF THE SOFTWARE.
 
-To request permission for any kind of use beyond viewing, contact: [tu_email@ejemplo.com]
+To request permission for any kind of use beyond viewing, contact: m.daller.2018@alumnos.urjc.es
 ```
