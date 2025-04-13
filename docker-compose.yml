@@ -73,7 +73,6 @@ services:
     restart: unless-stopped
     ports:
       - "1883:1883"
-      - "9001:9001"  # WebSocket
     volumes: 
       - ./configuration/mosquitto/config/:/mosquitto/config/
 
