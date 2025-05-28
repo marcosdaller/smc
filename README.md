@@ -88,9 +88,6 @@ The project consists of multiple containers communicating through a Docker inter
 ## Environment Variables
 
 This project uses environment variables defined in a `.env` file.  
-⚠️ **For security and privacy reasons, specific values are not included in this repository.**
-
-> It's recommended to provide a `.env.example` file to help other developers know which variables are needed without exposing sensitive data.
 
 ## Deploying with Docker Compose
 
@@ -136,14 +133,13 @@ Copyright (c) 2025 Marcos Daller
 
 All rights reserved.
 
-This software and its associated configuration files (the "Software") may **not** be used, copied, modified, published, or distributed without **prior written permission** from the author.
+This software and its associated configuration files (the "Software") may not be used, copied, modified, published, or distributed without prior written permission from the author.
 
 Usage is restricted under the following terms:
 
 - You must request permission via email before using or deploying any part of the Software.
-- Upon approval, the author will provide a sample `.env` file with the required variables for configuration.
+- Upon approval.
 - The Software may not be used for commercial or academic purposes without explicit consent.
-- Redistribution or sublicensing is prohibited.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
